@@ -1239,7 +1239,8 @@ function show(i){
   $('#prog').style.width = ((i + 1) / STAGES.length * 100) + '%';
   navBtns[i].scrollIntoView({block:'nearest', inline:'center', behavior: RM ? 'auto' : 'smooth'});
   window.scrollTo({top:0, behavior: RM ? 'auto' : 'smooth'});
-  if(i === HS_IDX){ requestAnimationFrame(function(){ renderStep(hs.i, true); }); }
+  /* the section is un-hidden above, so layout is ready: render now, not on the next frame */
+  if(i === HS_IDX){ renderStep(hs.i, true); }
 }
 $('#fbPrev').addEventListener('click', function(){ show(cur - 1); });
 $('#fbNext').addEventListener('click', function(){ show(cur + 1); });
