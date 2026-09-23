@@ -1,0 +1,1577 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="معمل تفاعلي لشرح اتصال HTTPS ومراحله الثلاث والفرق بين المفتاح المشترك والمفتاح العام — درس 2-1 تكنولوجيا المعلومات.">
+<meta property="og:title" content="HTTPS Handshake Lab">
+<meta property="og:description" content="معمل تفاعلي لشرح اتصال HTTPS ومراحله الثلاث والفرق بين المفتاح المشترك والمفتاح العام — درس 2-1 تكنولوجيا المعلومات.">
+<meta property="og:type" content="website">
+<title>HTTPS Handshake Lab</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --paper:#F4F6FC; --surface:#FFFFFF; --surface-2:#EDF0F9;
+  --ink:#0A0F22; --body:#333B5C; --muted:#6C749A;
+  --line:#DBE0F0; --line-strong:#C3CAE4;
+  --pub:#4B32E0;  --pub-bg:#ECE8FF;
+  --priv:#8F5400; --priv-bg:#FBEED6;
+  --sym:#00707F;  --sym-bg:#D5F0F4;
+  --bad:#C22546;  --bad-bg:#FCE3E9;
+  --good:#0A7350; --good-bg:#D9F2E7;
+  --slab:#0A0F22; --slab-ink:#E8EBFA; --slab-line:#242C4A; --slab-mut:#9AA3CC;
+  --shadow:0 1px 2px rgba(10,15,34,.05), 0 10px 28px -16px rgba(10,15,34,.28);
+  --r:14px;
+  --ar:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
+  --dis:"Readex Pro","IBM Plex Sans Arabic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#070B16; --surface:#111730; --surface-2:#18203C;
+  --ink:#EEF1FF; --body:#C2C8E4; --muted:#8E97BE;
+  --line:#26304F; --line-strong:#3A466E;
+  --pub:#AB9DFF; --pub-bg:#221D4C;
+  --priv:#F3B55B; --priv-bg:#3B2A0C;
+  --sym:#5AD5E6;  --sym-bg:#0A3441;
+  --bad:#FF8398;  --bad-bg:#3E1421;
+  --good:#5ADAA4; --good-bg:#0B3628;
+  --slab:#0C1226; --slab-ink:#E8EBFA; --slab-line:#2B3560; --slab-mut:#98A2CE;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.7);
+}}
+:root[data-theme="dark"]{
+  --paper:#070B16; --surface:#111730; --surface-2:#18203C;
+  --ink:#EEF1FF; --body:#C2C8E4; --muted:#8E97BE;
+  --line:#26304F; --line-strong:#3A466E;
+  --pub:#AB9DFF; --pub-bg:#221D4C;
+  --priv:#F3B55B; --priv-bg:#3B2A0C;
+  --sym:#5AD5E6;  --sym-bg:#0A3441;
+  --bad:#FF8398;  --bad-bg:#3E1421;
+  --good:#5ADAA4; --good-bg:#0B3628;
+  --slab:#0C1226; --slab-ink:#E8EBFA; --slab-line:#2B3560; --slab-mut:#98A2CE;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.7);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--body);
+  font-family:var(--ar);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+.page{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:0 110px}
+h1,h2,h3,h4{font-family:var(--dis);color:var(--ink);margin:0;line-height:1.3;text-wrap:balance;font-weight:600}
+p{margin:0}
+.ltr{direction:ltr;text-align:left}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.en{font-family:var(--dis);direction:ltr;unicode-bidi:isolate;display:inline-block;font-weight:500}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+/* masthead */
+.mast{padding-block:28px 16px}
+.eyebrow{font-family:var(--dis);font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--pub);font-weight:600;margin-bottom:9px;direction:ltr;text-align:right}
+.mast h1{font-size:clamp(26px,4.4vw,40px);font-weight:700;letter-spacing:-.01em}
+.mast .sub{margin-top:10px;max-width:64ch}
+/* stage nav */
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;
+  margin-inline:-16px;padding-inline:16px;padding-block:10px;
+  background:color-mix(in srgb,var(--paper) 90%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.navrow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.navrow button{flex:0 0 auto;display:flex;align-items:center;gap:7px;
+  font-family:var(--ar);font-size:13px;font-weight:500;color:var(--muted);
+  background:transparent;border:1px solid transparent;border-radius:999px;
+  padding:6px 12px;cursor:pointer;white-space:nowrap;transition:.15s}
+.navrow button .num{font-family:var(--mono);font-size:11px;font-weight:600;
+  width:19px;height:19px;display:grid;place-items:center;border-radius:50%;
+  background:var(--surface-2);color:var(--muted)}
+.navrow button:hover{color:var(--ink);background:var(--surface-2)}
+.navrow button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.navrow button[aria-selected="true"] .num{background:rgba(125,140,220,.3);color:inherit}
+.navrow button:focus-visible{outline:2px solid var(--pub);outline-offset:2px}
+/* stage */
+.stage{padding-block:30px 8px;animation:rise .3s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stage-head{margin-bottom:22px}
+.stage-head .kicker{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em;margin-bottom:6px;direction:ltr;text-align:right}
+.stage-head h2{font-size:clamp(21px,3vw,30px);font-weight:700}
+.stage-head .lede{margin-top:10px;max-width:70ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:20px;box-shadow:var(--shadow)}
+.card.flat{box-shadow:none;background:var(--surface-2);border-color:transparent}
+.card h3{font-size:16px;margin-bottom:4px}
+.card h4{font-size:12px;font-family:var(--ar);font-weight:700;color:var(--muted);
+  letter-spacing:.06em;margin-bottom:11px;text-transform:uppercase}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media (max-width:780px){.g2,.g3{grid-template-columns:1fr}}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.stack{display:flex;flex-direction:column;gap:13px}
+.stack.tight{gap:8px}
+/* controls */
+label.fld{display:flex;flex-direction:column;gap:5px;font-size:12px;
+  font-weight:700;color:var(--muted);flex:1 1 190px;text-transform:uppercase;letter-spacing:.05em}
+input[type=text]{font-family:var(--mono);font-size:14px;direction:ltr;text-align:left;
+  padding:9px 11px;border:1px solid var(--line-strong);border-radius:9px;
+  background:var(--surface);color:var(--ink);width:100%}
+input[type=text]:focus-visible{outline:2px solid var(--pub);outline-offset:1px;border-color:var(--pub)}
+.btn{font-family:var(--ar);font-size:13.5px;font-weight:600;cursor:pointer;
+  border-radius:9px;padding:9px 15px;border:1px solid var(--line-strong);
+  background:var(--surface);color:var(--ink);transition:.15s}
+.btn:hover{border-color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--pub);outline-offset:2px}
+.btn.p{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.p:hover{opacity:.87}
+.btn.d{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.btn.d:hover{border-color:var(--bad)}
+.btn[disabled]{opacity:.38;cursor:not-allowed}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:3px}
+.seg button{font-family:var(--mono);font-size:13px;font-weight:600;border:0;cursor:pointer;
+  background:transparent;color:var(--muted);padding:6px 14px;border-radius:8px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.seg button:focus-visible{outline:2px solid var(--pub);outline-offset:2px}
+/* key chips — the colour system */
+.k{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;
+  font-weight:600;padding:4px 9px;border-radius:7px;direction:ltr;white-space:nowrap;line-height:1.5}
+.k-pub{background:var(--pub-bg);color:var(--pub)}
+.k-priv{background:var(--priv-bg);color:var(--priv)}
+.k-sym{background:var(--sym-bg);color:var(--sym)}
+.k-bad{background:var(--bad-bg);color:var(--bad)}
+.k-good{background:var(--good-bg);color:var(--good)}
+.k-mut{background:var(--surface-2);color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:2px;background:currentColor;flex:0 0 auto}
+.dot.round{border-radius:50%}
+/* callouts */
+.note{border-radius:11px;padding:13px 15px;font-size:14px;border:1px solid transparent}
+.note .t{font-weight:700;font-size:12px;letter-spacing:.06em;margin-bottom:3px;display:block;text-transform:uppercase}
+.note.info{background:var(--pub-bg);color:var(--pub);border-color:color-mix(in srgb,var(--pub) 22%,transparent)}
+.note.bad{background:var(--bad-bg);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 24%,transparent)}
+.note.good{background:var(--good-bg);color:var(--good);border-color:color-mix(in srgb,var(--good) 24%,transparent)}
+.note.warn{background:var(--priv-bg);color:var(--priv);border-color:color-mix(in srgb,var(--priv) 30%,transparent)}
+/* data */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.tbl{border-collapse:collapse;width:100%;font-size:13px;direction:ltr;min-width:430px}
+table.tbl th{font-family:var(--ar);font-size:11px;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted);text-align:left;font-weight:700;padding:7px 10px;border-bottom:1px solid var(--line)}
+table.tbl td{font-family:var(--mono);padding:7px 10px;border-bottom:1px solid var(--line);color:var(--ink)}
+table.tbl tbody tr:last-child td{border-bottom:0}
+table.tbl td.wide{font-family:var(--ar);white-space:normal;color:var(--body)}
+.out{font-family:var(--mono);font-size:13.5px;direction:ltr;text-align:left;
+  background:var(--surface-2);border-radius:9px;padding:11px 13px;
+  word-break:break-all;color:var(--ink);min-height:42px;line-height:1.65}
+.out.cipher{color:var(--sym)}
+.out.locked{color:var(--pub)}
+.out.danger{color:var(--bad)}
+.out.ok{color:var(--good)}
+.down{text-align:center;color:var(--muted);font-size:14px;line-height:1;font-family:var(--mono)}
+</style>
+<style>
+/* ---------- the wire: actors, channel, packet ---------- */
+.sim{background:var(--slab);border:1px solid var(--slab-line);border-radius:16px;
+  padding:16px;color:var(--slab-ink);direction:ltr}
+.wirebox{display:grid;grid-template-columns:118px minmax(0,1fr) 118px;gap:12px;align-items:stretch}
+.actor{background:rgba(120,140,220,.09);border:1px solid var(--slab-line);border-radius:12px;
+  padding:12px 8px;text-align:center;display:flex;flex-direction:column;gap:4px;justify-content:center}
+.actor .ico{font-size:23px;line-height:1.2}
+.actor .nm{font-family:var(--dis);font-size:12.5px;font-weight:600;color:var(--slab-ink)}
+.actor .sub{font-family:var(--mono);font-size:10.5px;color:var(--slab-mut)}
+.actor.lit{border-color:var(--pub);box-shadow:0 0 0 3px color-mix(in srgb,var(--pub) 22%,transparent)}
+.channel{position:relative;border-radius:12px;border:1px dashed var(--slab-line);
+  min-height:104px;background:repeating-linear-gradient(90deg,transparent 0 10px,rgba(140,160,240,.07) 10px 20px);
+  overflow:hidden}
+.chlabel{position:absolute;top:7px;left:0;right:0;text-align:center;font-family:var(--mono);
+  font-size:10px;letter-spacing:.14em;color:var(--slab-mut);text-transform:uppercase}
+.packet{position:absolute;left:8px;top:30px;width:min(270px,64%);border-radius:10px;
+  padding:8px 10px;font-family:var(--mono);font-size:11.5px;line-height:1.5;
+  background:var(--surface);color:var(--ink);box-shadow:0 6px 20px -6px rgba(0,0,0,.6);
+  border:1px solid var(--line);word-break:break-all}
+.packet .ptitle{font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;
+  display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.packet.open .ptitle{color:var(--bad)}
+.packet.sealed .ptitle{color:var(--pub)}
+.packet.symsealed .ptitle{color:var(--sym)}
+.packet.open{border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.packet.sealed{border-color:color-mix(in srgb,var(--pub) 50%,transparent)}
+.packet.symsealed{border-color:color-mix(in srgb,var(--sym) 50%,transparent)}
+.eve{grid-column:2;border-radius:12px;padding:11px 13px;
+  background:color-mix(in srgb,var(--bad) 13%,var(--slab));
+  border:1px solid color-mix(in srgb,var(--bad) 40%,transparent)}
+.eve .hd{display:flex;align-items:center;gap:7px;font-family:var(--dis);font-size:12px;
+  font-weight:600;color:var(--bad);margin-bottom:5px}
+.eve .body{font-family:var(--mono);font-size:12px;color:var(--slab-ink);word-break:break-all;line-height:1.6}
+.eve .verdict{font-family:var(--ar);font-size:12.5px;color:var(--slab-mut);margin-top:5px;
+  direction:rtl;text-align:right}
+@media (max-width:700px){
+  .wirebox{grid-template-columns:1fr}
+  .eve{grid-column:1}
+  .channel{min-height:118px}
+}
+/* vaults */
+.vaults{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media (max-width:700px){.vaults{grid-template-columns:1fr}}
+.vault{border:1px solid var(--slab-line);border-radius:12px;padding:11px 13px;
+  background:rgba(120,140,220,.07)}
+.vault h5{margin:0 0 8px;font-family:var(--dis);font-size:12px;font-weight:600;
+  color:var(--slab-ink);display:flex;align-items:center;gap:6px}
+.vault .keys{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.vault .keys .k{animation:pop .3s ease both}
+@keyframes pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.vault .empty{font-family:var(--mono);font-size:11.5px;color:var(--slab-mut)}
+/* step timeline */
+.timeline{display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.timeline button{flex:1 1 0;min-width:74px;text-align:right;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 9px;
+  font-family:var(--ar);font-size:11px;color:var(--muted);transition:.15s;line-height:1.4}
+.timeline button .n{font-family:var(--mono);font-size:10px;font-weight:600;display:block;color:var(--muted)}
+.timeline button:hover{border-color:var(--line-strong)}
+.timeline button[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.timeline button[aria-current="true"] .n{color:var(--paper);opacity:.7}
+.timeline button.done{border-color:color-mix(in srgb,var(--good) 45%,transparent)}
+.timeline button:focus-visible{outline:2px solid var(--pub);outline-offset:2px}
+/* step explainer */
+.steplog{margin-top:14px;border-radius:12px;padding:14px 16px;background:var(--surface);
+  border:1px solid var(--line)}
+.steplog .hd{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:6px;direction:rtl}
+.steplog .stepn{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--paper);
+  background:var(--ink);border-radius:6px;padding:2px 7px}
+.steplog .ten{font-family:var(--dis);font-size:16px;font-weight:600;color:var(--ink);direction:ltr}
+.steplog .tar{font-size:14.5px;color:var(--body)}
+/* certificate card */
+.cert{border-radius:12px;border:1px solid var(--line-strong);background:var(--surface);overflow:hidden;direction:ltr}
+.cert .top{background:var(--slab);color:var(--slab-ink);padding:10px 14px;display:flex;
+  align-items:center;gap:8px;font-family:var(--dis);font-size:13px;font-weight:600}
+.cert dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:0}
+.cert dt{font-family:var(--ar);font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--line);font-weight:700;white-space:nowrap}
+.cert dd{margin:0;font-family:var(--mono);font-size:12.5px;color:var(--ink);
+  padding:8px 14px;border-bottom:1px solid var(--line);word-break:break-all}
+.cert dl > :nth-last-child(-n+2){border-bottom:0}
+.cert.tampered{border-color:var(--bad)}
+.cert.tampered .top{background:var(--bad)}
+.tamp{color:var(--bad);font-weight:600}
+/* bars */
+.bars{display:flex;flex-direction:column;gap:12px;direction:ltr}
+.bar .lbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;
+  color:var(--ink);margin-bottom:4px}
+.bar .track{height:14px;border-radius:7px;background:var(--surface-2);overflow:hidden}
+.bar .fill{height:100%;border-radius:7px;width:0;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.fill.sym{background:var(--sym)}
+.fill.pub{background:var(--pub)}
+/* quiz */
+.q{border:1px solid var(--line);border-radius:12px;padding:15px 17px;background:var(--surface)}
+.q .qt{font-weight:600;color:var(--ink);font-size:15px;margin-bottom:11px;font-family:var(--ar)}
+.q .opts{display:flex;flex-direction:column;gap:7px}
+.q .opts button{text-align:right;font-family:var(--ar);font-size:14px;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line-strong);border-radius:9px;
+  padding:9px 13px;color:var(--body);transition:.15s}
+.q .opts button:hover:not([disabled]){border-color:var(--ink);color:var(--ink)}
+.q .opts button:focus-visible{outline:2px solid var(--pub);outline-offset:2px}
+.q .opts button.right{background:var(--good-bg);border-color:var(--good);color:var(--good);font-weight:600}
+.q .opts button.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.q .fb{margin-top:10px;font-size:13.5px}
+/* bottom bar */
+.footbar{position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(10px);
+  border-top:1px solid var(--line);
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.footbar .inner{max-width:1120px;margin:0 auto;display:flex;align-items:center;
+  justify-content:space-between;gap:10px}
+.footbar .pos{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.legend{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+@media (max-width:640px){.legend{display:none}}
+/* ---------- figures ---------- */
+figure.fig{margin:0}
+figure.fig svg{width:100%;height:auto;max-width:100%;display:block}
+figure.fig figcaption{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.7}
+/* ---------- the naming trap ---------- */
+.trap{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.trap{grid-template-columns:1fr}}
+.trapcard{border-radius:12px;padding:15px 16px;border:1px solid var(--line)}
+.trapcard.pub{background:var(--pub-bg);border-color:color-mix(in srgb,var(--pub) 28%,transparent)}
+.trapcard.sym{background:var(--sym-bg);border-color:color-mix(in srgb,var(--sym) 28%,transparent)}
+.trapcard h3{font-size:17px;margin-bottom:2px}
+.trapcard.pub h3,.trapcard.pub .nm{color:var(--pub)}
+.trapcard.sym h3,.trapcard.sym .nm{color:var(--sym)}
+.trapcard .nm{font-family:var(--mono);font-size:12px;font-weight:600;margin-bottom:11px;display:block}
+.trapcard dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 12px;font-size:13.5px}
+.trapcard dt{color:var(--muted);font-weight:600;white-space:nowrap}
+.trapcard dd{margin:0;color:var(--ink);font-weight:600}
+.punch{margin-top:14px;border-radius:12px;padding:15px 17px;background:var(--slab);color:var(--slab-ink);
+  font-family:var(--dis);font-size:16px;line-height:1.8}
+.punch b{color:var(--sym)}
+.punch u{color:var(--pub);text-decoration:none;border-bottom:2px solid var(--pub)}
+/* ---------- who holds what ---------- */
+.matrix td.yes{color:var(--good);font-weight:600}
+.matrix td.no{color:var(--bad);font-weight:600}
+.matrix tr td:first-child{font-family:var(--ar);font-weight:600;color:var(--ink);white-space:nowrap}
+.matrix td.hl{background:var(--bad-bg);position:relative}
+.matrix th.cpub{color:var(--pub)}
+.matrix th.cpriv{color:var(--priv)}
+.matrix th.csym{color:var(--sym)}
+/* ---------- classification drill ---------- */
+.drill{display:flex;flex-direction:column;gap:9px}
+.ditem{border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:var(--surface);transition:.18s}
+.ditem .top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.ditem .st{font-size:14.5px;color:var(--ink);flex:1 1 220px;line-height:1.6}
+.ditem .picks{display:flex;gap:6px;flex:0 0 auto}
+.ditem .picks button{font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;
+  border-radius:8px;padding:7px 11px;border:1px solid var(--line-strong);background:var(--surface);
+  color:var(--muted);transition:.15s;white-space:nowrap}
+.ditem .picks button:hover:not([disabled]){color:var(--ink);border-color:var(--ink)}
+.ditem .picks button:focus-visible{outline:2px solid var(--pub);outline-offset:2px}
+.ditem .picks button.pubp[data-on="1"]{background:var(--pub-bg);color:var(--pub);border-color:var(--pub)}
+.ditem .picks button.symp[data-on="1"]{background:var(--sym-bg);color:var(--sym);border-color:var(--sym)}
+.ditem .picks button.miss{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.ditem .why{font-size:13px;margin-top:9px;color:var(--body);display:none}
+.ditem.done .why{display:block}
+.ditem.ok{border-color:color-mix(in srgb,var(--good) 55%,transparent)}
+.ditem.no{border-color:color-mix(in srgb,var(--bad) 55%,transparent)}
+.drillbar{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap}
+.drillscore{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink)}
+/* ---------- handshake phase ribbon ---------- */
+.phases{display:grid;grid-template-columns:3fr 3fr 1.7fr;gap:6px;margin-bottom:9px;direction:ltr}
+.phase{border-radius:9px;padding:8px 10px;text-align:center;border:1px solid var(--line);
+  background:var(--surface);color:var(--muted);transition:.2s;line-height:1.35}
+.phase .pn{display:block;font-family:var(--dis);font-size:12px;font-weight:600}
+.phase .pm{display:block;font-family:var(--mono);font-size:10px;opacity:.8}
+.phase.on{border-width:1px}
+.phase.on.pub{background:var(--pub-bg);color:var(--pub);border-color:var(--pub)}
+.phase.on.sym{background:var(--sym-bg);color:var(--sym);border-color:var(--sym)}
+.timeline{direction:ltr}
+.timeline button{text-align:left}
+/* ---------- progress ---------- */
+.progress{height:3px;background:var(--surface-2);border-radius:2px;overflow:hidden;margin-top:9px}
+.progress i{display:block;height:100%;background:var(--pub);width:14%;transition:width .35s ease}
+/* ---------- actor icons ---------- */
+.actor .ico{display:flex;justify-content:center;align-items:center;height:28px}
+.actor .ico svg{width:26px;height:26px;color:var(--slab-ink)}
+.actor.lit .ico svg{color:var(--pub)}
+/* ---------- session usage chart ---------- */
+.usage{direction:ltr}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+<style>[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<div class="page" dir="rtl">
+
+<header class="mast">
+  <div class="eyebrow">Lesson 2-1 · Cryptography &amp; Authentication</div>
+  <h1>إزاي الـ <span class="en">HTTPS</span> بيحمي بياناتك؟</h1>
+  <p class="sub">معمل تفاعلي على درس <span class="en">2-1</span>: اضغط، جرّب، وشوف المفاتيح وهي بتتولد وبتتبادل خطوة بخطوة — والمهاجم قاعد على الخط بيتفرج ومش قادر يعمل حاجة.</p>
+</header>
+
+<nav class="nav" aria-label="محطات الدرس">
+  <div class="navrow" id="navrow" role="tablist"></div>
+  <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+</nav>
+
+<main id="stages">
+
+<!-- ============ 1 ============ -->
+<section class="stage" id="s0" role="tabpanel" aria-labelledby="t0">
+  <div class="stage-head">
+    <div class="kicker">01 · THE PROBLEM</div>
+    <h2>ليه محتاجين تشفير من الأساس؟</h2>
+    <p class="lede">أي رسالة بتبعتها من جهازك مش بتروح للسيرفر على طول. بتعدّي على الراوتر، وعلى شبكة الـ Wi-Fi، وعلى مزوّد الخدمة، وعلى راوترات كتير في الطريق. أي واحد من دول يقدر يقرا اللي بيعدّي قدامه. اكتب أي حاجة وبدّل بين <span class="en">HTTP</span> و <span class="en">HTTPS</span> وشوف الفرق.</p>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:14px">
+      <label class="fld" style="flex:1 1 280px">الرسالة اللي بتبعتها
+        <input type="text" id="p0msg" value="user=fady&amp;password=12345" spellcheck="false">
+      </label>
+      <div class="seg" role="group" aria-label="البروتوكول">
+        <button id="p0http" aria-pressed="true">HTTP</button>
+        <button id="p0https" aria-pressed="false">HTTPS</button>
+      </div>
+    </div>
+
+    <div class="sim">
+      <div class="wirebox">
+        <div class="actor"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="11" rx="2"></rect><path d="M2 19h20"></path></svg></div><div class="nm">جهازك</div><div class="sub">client</div></div>
+        <div class="channel" style="min-height:92px">
+          <div class="chlabel">public network · الشبكة العامة</div>
+          <div class="packet" id="p0pkt" style="top:32px">
+            <div class="ptitle"><span class="dot round"></span><span id="p0ptitle">plain text</span></div>
+            <div id="p0pbody">…</div>
+          </div>
+        </div>
+        <div class="actor"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="6.5" rx="1.8"></rect><rect x="3" y="13.5" width="18" height="6.5" rx="1.8"></rect><path d="M7 7.2h.01M7 16.8h.01"></path></svg></div><div class="nm">السيرفر</div><div class="sub">server</div></div>
+        <div class="eve">
+          <div class="hd"><span>🕵️</span><span>اللي قاعد على الشبكة بيشوف</span></div>
+          <div class="body" id="p0eve">…</div>
+          <div class="verdict" id="p0verdict">…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <div class="note bad"><span class="t">HTTP</span> البيانات بتمشي نص واضح <span class="en">(plain text)</span>. مفيش أي مجهود مطلوب عشان يقراها — هي مكتوبة كده أصلاً.</div>
+      <div class="note good"><span class="t">HTTPS</span> نفس البيانات بس متحوّلة لشكل تاني بمفتاح. اللي على الخط بيشوف أرقام، والأرقام دي بلا قيمة من غير المفتاح.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h4>السؤال اللي الدرس كله بيجاوب عليه</h4>
+    <p>لو الاتنين لازم يستخدموا نفس المفتاح عشان يشفّروا ويفكّوا التشفير… <b>المفتاح ده بيوصل إزاي من المتصفح للسيرفر؟</b> لو بعتناه على نفس الشبكة المفتوحة دي، المهاجم هياخده ويفك بيه كل حاجة. الحل في المحطات الجاية.</p>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section class="stage" id="s1" role="tabpanel" aria-labelledby="t1" hidden>
+  <div class="stage-head">
+    <div class="kicker">02 · COMMON-KEY (SYMMETRIC)</div>
+    <h2>التشفير بالمفتاح المشترك <span class="en">Common-key</span></h2>
+    <p class="lede">مفتاح واحد بس. <b>نفس المفتاح</b> اللي بيقفل هو اللي بيفتح — زي قفل الشقة بالظبط، النسخة اللي معاك ونسخة أخوك متطابقين. وسريع جدًا لأن العمليات اللي بيعملها بسيطة.</p>
+  </div>
+
+  <div class="card">
+    <div class="grid g2">
+      <div class="stack">
+        <h4>عند المُرسِل — التشفير</h4>
+        <label class="fld">النص الأصلي · plaintext
+          <input type="text" id="s1txt" value="MEET AT 7" spellcheck="false">
+        </label>
+        <label class="fld">المفتاح المشترك · common key
+          <input type="text" id="s1key" value="CAT" spellcheck="false">
+        </label>
+        <div>
+          <div class="k k-sym" style="margin-bottom:6px"><span class="dot"></span>common key</div>
+          <div class="out cipher" id="s1cipher">…</div>
+        </div>
+      </div>
+      <div class="stack">
+        <h4>عند المستقبِل — فك التشفير</h4>
+        <label class="fld">المفتاح اللي معاه
+          <input type="text" id="s1key2" value="CAT" spellcheck="false">
+        </label>
+        <div>
+          <div class="k" id="s1matchchip" style="margin-bottom:6px"></div>
+          <div class="out" id="s1plain">…</div>
+        </div>
+        <div class="note" id="s1note"></div>
+      </div>
+    </div>
+
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;font-weight:600;color:var(--ink);font-size:14px">
+        شوف العملية حرف بحرف <span class="muted small">(كل حرف بيتزحلق بمقدار حرف المفتاح)</span>
+      </summary>
+      <div class="scroll" style="margin-top:10px">
+        <table class="tbl" id="s1table"></table>
+      </div>
+      <p class="small muted" style="margin-top:9px;direction:rtl;text-align:right">
+        المُرسِل بيزحلق كل حرف لقدام، والمستقبِل بيزحلقه لورا بنفس المقدار فيرجع زي ما كان. ده <b>مثال مبسّط</b> عشان تشوف الفكرة بس — التشفير الحقيقي بيستخدم طرق أقوى بكتير، لكن المبدأ واحد: <b>مفتاح واحد بيقفل وبيفتح</b>.
+      </p>
+    </details>
+  </div>
+
+  <div class="card" style="margin-top:16px;border-color:color-mix(in srgb,var(--bad) 35%,transparent)">
+    <h3 style="color:var(--bad)">🔑 مشكلة توزيع المفتاح — <span class="en">Key distribution problem</span></h3>
+    <p style="margin-top:8px">المفتاح المشترك حلو وسريع، بس فيه سؤال مالوش إجابة لوحده: <b>إزاي المتصفح والسيرفر يتفقوا على نفس المفتاح وهما مشافوش بعض قبل كده؟</b> لو المتصفح بعت المفتاح على الشبكة، المهاجم هياخد نسخة ويقرا كل حاجة. ده اللي خلّى الناس تخترع نوع تاني خالص من المفاتيح ⟵</p>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section class="stage" id="s2" role="tabpanel" aria-labelledby="t2" hidden>
+  <div class="stage-head">
+    <div class="kicker">03 · PUBLIC-KEY (ASYMMETRIC)</div>
+    <h2>التشفير بالمفتاح العام <span class="en">Public-key</span></h2>
+    <p class="lede">هنا المفتاح بقى <b>زوج</b>: مفتاح عام <span class="k k-pub"><span class="dot"></span>public</span> ينشر للعالم كله، ومفتاح خاص <span class="k k-priv"><span class="dot"></span>private</span> مايخرجش من السيرفر أبدًا. اللي يتقفل بالعام مايتفتحش غير بالخاص. يبقى أي حد يقدر يبعتلي رسالة مقفولة، وأنا بس اللي أفتحها.</p>
+  </div>
+
+  <div class="card">
+    <h4>المفتاحين — وكل واحد بيعمل إيه</h4>
+    <div class="trap">
+      <div class="trapcard pub">
+        <h3>المفتاح العام</h3>
+        <span class="nm">public key</span>
+        <p style="color:var(--ink)">السيرفر بينشره لأي حد يطلبه، وبيوصل للمتصفح جوه الشهادة الرقمية. وظيفته إنه <b>يقفل</b> بس.</p>
+      </div>
+      <div class="trapcard" style="background:var(--priv-bg);border-color:color-mix(in srgb,var(--priv) 30%,transparent)">
+        <h3 style="color:var(--priv)">المفتاح الخاص</h3>
+        <span class="nm" style="color:var(--priv)">private key</span>
+        <p style="color:var(--ink)">محبوس جوه السيرفر ومايخرجش منه أبدًا. هو الوحيد اللي <b>يفتح</b> اللي اتقفل بالعام.</p>
+      </div>
+    </div>
+    <div class="note info" style="margin-top:14px">
+      <span class="t">اتخيّلها كده</span>
+      المفتاح العام زي <b>قفل مفتوح</b> السيرفر وزّعه على الناس. أي حد ياخد قفل، يحط ورقته في صندوق، يقفله، ويبعته. القفل اتقفل خلاص — ومفيش اللي يفتحه غير صاحب المفتاح اللي في درج السيرفر.
+    </div>
+    <p class="small muted" style="margin-top:11px">المفتاحين مرتبطين ببعض، بس معرفتك بالعام مابتوصّلكش للخاص خالص. المفاتيح الحقيقية أرقام ضخمة لدرجة إن مفيش كمبيوتر في الدنيا يقدر يخمّنها.</p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h4>جرّب بنفسك</h4>
+    <div class="grid g2">
+      <div class="stack">
+        <h4 style="margin-bottom:2px">① أي حد يقدر يقفل بالمفتاح العام</h4>
+        <label class="fld">الرسالة
+          <input type="text" id="s2txt" value="HELLO" spellcheck="false">
+        </label>
+        <div class="row"><span class="k k-pub"><span class="dot"></span>public key</span>
+          <span class="muted small">اتقفلت وبقت كده:</span></div>
+        <div class="out locked" id="s2cipher">…</div>
+      </div>
+      <div class="stack">
+        <h4 style="margin-bottom:2px">② السيرفر بس هو اللي يفتح</h4>
+        <div class="row">
+          <button class="btn p" id="s2dec">افتح بالمفتاح الخاص 🔓</button>
+          <button class="btn d" id="s2decwrong">جرّب تفتح بالمفتاح العام</button>
+        </div>
+        <div class="out" id="s2plain">اضغط زرار عشان تشوف النتيجة</div>
+        <div class="note" id="s2note" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="note info"><span class="t">اتجاه المفاتيح</span> المفتاح العام <b>بيقفل</b>، والخاص <b>بيفتح</b>. وفي التوقيع الرقمي الاتجاه بينعكس: الخاص <b>بيوقّع</b> والعام <b>بيتحقق</b> — المحطة الجاية.</div>
+    <div class="note warn"><span class="t">العيب</span> بطيء. مينفعش نشفّر بيه صفحة كاملة فيها صور وفيديو — شوف محطة <b>ليه الاتنين</b>.</div>
+  </div>
+</section>
+
+<!-- ============ 4 · THE DIFFERENCE ============ -->
+<section class="stage" id="s7" role="tabpanel" hidden>
+  <div class="stage-head">
+    <div class="kicker">04 · HEAD TO HEAD</div>
+    <h2>«عام» ولا «مشترك»؟ الفرق في صورة واحدة</h2>
+    <p class="lede">دي أكتر نقطة بتتلخبط، والسبب مش صعوبة الفكرة — السبب <b>الاسمين نفسهم</b>. كلمة «عام» وكلمة «مشترك» في العربي بيوحوا بنفس الحاجة: إن فيه ناس كتير معاهم المفتاح. والحقيقة عكس كده تمامًا.</p>
+  </div>
+
+  <div class="card">
+    <h4>الفخ اللي بيقع فيه أغلب الطلبة</h4>
+    <div class="trap">
+      <div class="trapcard pub">
+        <h3>المفتاح العام</h3>
+        <span class="nm">public key</span>
+        <dl>
+          <dt>مين معاه نسخة؟</dt><dd>الدنيا كلها — وده مقصود</dd>
+          <dt>سرّي؟</dt><dd>لأ خالص، منشور</dd>
+          <dt>بيعمل إيه؟</dt><dd>بيقفل بس · مابيفتحش</dd>
+          <dt>ليه اسمه كده؟</dt><dd>لأنه معروض للعامة</dd>
+        </dl>
+      </div>
+      <div class="trapcard sym">
+        <h3>المفتاح المشترك</h3>
+        <span class="nm">common key</span>
+        <dl>
+          <dt>مين معاه نسخة؟</dt><dd>طرفين بس، ومحدش غيرهم</dd>
+          <dt>سرّي؟</dt><dd>أيوه — ده سر الجلسة كلها</dd>
+          <dt>بيعمل إيه؟</dt><dd>بيقفل <b>و</b>بيفتح</dd>
+          <dt>ليه اسمه كده؟</dt><dd>لأن الطرفين بيشتركوا فيه</dd>
+        </dl>
+      </div>
+    </div>
+    <div class="punch">
+      يعني بالبلدي: <u>العام</u> منشور للكل ومش خطر لو اتسرق… و<b>المشترك</b> سر بين اتنين ولو اتسرق الجلسة كلها راحت.
+      الاسمين بيوحوا بالعكس — خلّي بالك.
+    </div>
+  </div>
+
+  <figure class="fig card" style="margin-top:16px">
+    <h4>نفس الرحلة… بس بمفاتيح مختلفة</h4>
+    <svg viewBox="0 0 760 320" role="img" aria-label="Common-key uses one identical key at both ends to lock and unlock; public-key locks with the public key and can only be opened by a different private key" style="color:var(--body)">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+        </marker>
+      </defs>
+
+      <text x="20" y="18" font-size="11.5" font-weight="700" fill="var(--sym)" letter-spacing="1">COMMON-KEY (SYMMETRIC)</text>
+      <rect x="20" y="30" width="160" height="78" rx="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+      <text x="100" y="58" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Browser</text>
+      <rect x="46" y="70" width="108" height="23" rx="6" fill="var(--sym-bg)"></rect>
+      <text x="100" y="86" text-anchor="middle" font-size="11" font-weight="600" fill="var(--sym)">key K</text>
+      <line x1="188" y1="69" x2="258" y2="69" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"></line>
+      <text x="223" y="59" text-anchor="middle" font-size="10" fill="currentColor">locks with K</text>
+      <rect x="266" y="44" width="128" height="50" rx="9" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.2"></rect>
+      <text x="330" y="73" text-anchor="middle" font-size="11.5" fill="currentColor">sealed data</text>
+      <line x1="402" y1="69" x2="472" y2="69" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"></line>
+      <text x="437" y="59" text-anchor="middle" font-size="10" fill="currentColor">opens with K</text>
+      <rect x="480" y="30" width="160" height="78" rx="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+      <text x="560" y="58" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Web server</text>
+      <rect x="506" y="70" width="108" height="23" rx="6" fill="var(--sym-bg)"></rect>
+      <text x="560" y="86" text-anchor="middle" font-size="11" font-weight="600" fill="var(--sym)">key K</text>
+      <path d="M100 112 C100 140, 560 140, 560 112" fill="none" stroke="var(--sym)" stroke-width="1.2" stroke-dasharray="4 4"></path>
+      <text x="330" y="156" text-anchor="middle" font-size="11" fill="var(--sym)">one identical key — both sides must already hold the same copy</text>
+
+      <line x1="20" y1="176" x2="740" y2="176" stroke="currentColor" stroke-width="1" opacity=".25"></line>
+
+      <text x="20" y="204" font-size="11.5" font-weight="700" fill="var(--pub)" letter-spacing="1">PUBLIC-KEY (ASYMMETRIC)</text>
+      <rect x="20" y="216" width="160" height="80" rx="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+      <text x="100" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Browser</text>
+      <rect x="46" y="256" width="108" height="23" rx="6" fill="var(--pub-bg)"></rect>
+      <text x="100" y="272" text-anchor="middle" font-size="11" font-weight="600" fill="var(--pub)">public key</text>
+      <line x1="188" y1="255" x2="258" y2="255" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"></line>
+      <text x="223" y="245" text-anchor="middle" font-size="10" fill="currentColor">locks with public</text>
+      <rect x="266" y="230" width="128" height="50" rx="9" fill="var(--surface-2)" stroke="currentColor" stroke-width="1.2"></rect>
+      <text x="330" y="259" text-anchor="middle" font-size="11.5" fill="currentColor">sealed data</text>
+      <line x1="402" y1="255" x2="472" y2="255" stroke="currentColor" stroke-width="1.4" marker-end="url(#a2)"></line>
+      <text x="437" y="245" text-anchor="middle" font-size="10" fill="currentColor">opens with private</text>
+      <rect x="480" y="216" width="160" height="80" rx="11" fill="none" stroke="currentColor" stroke-width="1.4"></rect>
+      <text x="560" y="238" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Web server</text>
+      <rect x="506" y="248" width="108" height="21" rx="6" fill="var(--pub-bg)"></rect>
+      <text x="560" y="263" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--pub)">public key</text>
+      <rect x="506" y="272" width="108" height="21" rx="6" fill="var(--priv-bg)"></rect>
+      <text x="560" y="287" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--priv)">private key</text>
+      <text x="330" y="314" text-anchor="middle" font-size="11" fill="var(--pub)">two different keys — the one that locks can never open. Only the private key opens.</text>
+    </svg>
+    <figcaption>نفس المسار بالظبط في الحالتين، والفرق الوحيد هو <b>لون المفاتيح على الطرفين</b>. فوق: مفتاح واحد متكرر على الجهتين. تحت: مفتاحين مختلفين — واحد يقفل وواحد يفتح.</figcaption>
+  </figure>
+
+  <div class="card" style="margin-top:16px">
+    <h4>مين معاه إيه؟ — الجدول اللي بيحسم الموضوع</h4>
+    <div class="scroll">
+      <table class="tbl matrix" style="min-width:540px">
+        <thead><tr><th></th><th class="cpub">المفتاح العام للسيرفر</th><th class="cpriv">المفتاح الخاص للسيرفر</th><th class="csym">المفتاح المشترك</th></tr></thead>
+        <tbody>
+          <tr><td>🌐 المتصفح</td><td class="yes">✓ عنده</td><td class="no">✗ مش عنده</td><td class="yes">✓ هو اللي ولّده</td></tr>
+          <tr><td>🖥️ السيرفر</td><td class="yes">✓ عنده</td><td class="yes">✓ عنده لوحده</td><td class="yes">✓ فكّه واستلمه</td></tr>
+          <tr><td>🕵️ المهاجم</td><td class="yes hl">✓ عنده فعلًا!</td><td class="no">✗ مستحيل</td><td class="no">✗ مستحيل</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note info" style="margin-top:13px">
+      <span class="t">الخانة الحمرا هي المفتاح</span>
+      أيوه، <b>المهاجم معاه المفتاح العام</b> — وده مش خطأ ولا ثغرة، ده التصميم نفسه. المفتاح العام بيقفل بس. ساعتها هو زي واحد معاه قفل مفتوح: يقدر يقفل بيه براحته، بس مش هيقدر يفتح حاجة مقفولة. الخانتين الحمر التانيين هما اللي بيحموا كل حاجة.
+    </div>
+  </div>
+
+  <figure class="fig card" style="margin-top:16px">
+    <h4>كل واحد بيشتغل إمتى في الجلسة؟</h4>
+    <svg class="usage" viewBox="0 0 700 150" role="img" aria-label="Public-key runs only during the handshake at the very start; common-key encrypts everything for the rest of the session" style="color:var(--body)">
+      <text x="40" y="26" font-size="10.5" font-weight="600" fill="var(--pub)">handshake</text>
+      <line x1="40" y1="32" x2="40" y2="48" stroke="var(--pub)" stroke-width="1"></line>
+      <line x1="86" y1="32" x2="86" y2="48" stroke="var(--pub)" stroke-width="1"></line>
+      <text x="360" y="26" font-size="10.5" font-weight="600" fill="var(--sym)">كل بايت بعد كده — الصفحة، الصور، الفيديو، الفورم</text>
+
+      <rect x="40" y="52" width="46" height="34" rx="5" fill="var(--pub)"></rect>
+      <rect x="88" y="52" width="572" height="34" rx="5" fill="var(--sym)"></rect>
+      <text x="63" y="74" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">public</text>
+      <text x="374" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">common-key cryptography</text>
+
+      <line x1="40" y1="94" x2="660" y2="94" stroke="currentColor" stroke-width="1" opacity=".3"></line>
+      <line x1="40" y1="94" x2="40" y2="100" stroke="currentColor" stroke-width="1" opacity=".5"></line>
+      <line x1="660" y1="94" x2="660" y2="100" stroke="currentColor" stroke-width="1" opacity=".5"></line>
+      <text x="40" y="114" font-size="10.5" fill="var(--muted)">0 ms</text>
+      <text x="660" y="114" text-anchor="end" font-size="10.5" fill="var(--muted)">end of session</text>
+      <text x="350" y="138" text-anchor="middle" font-size="11" fill="currentColor">public-key: ~7% of the time, once. common-key: everything else.</text>
+    </svg>
+    <figcaption>المفتاح العام دوره يخلص بسرعة — بيشتغل مرة واحدة في أول الاتصال عشان يوصّل المفتاح المشترك بأمان، وبعدين بيقف خالص. الباقي كله على المفتاح المشترك.</figcaption>
+  </figure>
+
+  <div class="card" style="margin-top:16px">
+    <div class="drillbar">
+      <div>
+        <h3>تمرين سريع: الجملة دي بتتكلم عن أنهي نوع؟</h3>
+        <p class="small muted" style="margin-top:3px">اضغط على النوع الصح. ده أسرع تمرين يثبّت الفرق.</p>
+      </div>
+      <div class="row" style="gap:10px">
+        <span class="drillscore" id="drillScore">0 / 8</span>
+        <button class="btn" id="drillReset">↺ من الأول</button>
+      </div>
+    </div>
+    <div class="drill" id="drill"></div>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="stage" id="s3" role="tabpanel" aria-labelledby="t3" hidden>
+  <div class="stage-head">
+    <div class="kicker">05 · CERTIFICATE &amp; DIGITAL SIGNATURE</div>
+    <h2>الشهادة الرقمية ومين يضمن إنك بتكلم الموقع الصح</h2>
+    <p class="lede">لو أي حد يقدر ينشر مفتاح عام، إيه اللي يمنع مهاجم إنه يقول «أنا بنك مصر، خد مفتاحي»؟ الإجابة: جهة موثوقة اسمها <span class="en">Certificate Authority (CA)</span> بتشهد على المفتاح، وبتوقّع الشهادة بمفتاحها الخاص. والمتصفح بتاعك متولد وجواه مفاتيح الـ CA العامة.</p>
+  </div>
+
+  <figure style="margin:0 0 16px">
+    <div class="card" style="padding:14px">
+      <svg viewBox="0 0 720 210" role="img" aria-label="The CA signs the certificate with its private key; the browser verifies that signature with the CA public key that ships inside it" style="width:100%;max-width:100%;height:auto;color:var(--body)">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+          </marker>
+          <marker id="arv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--good)"></path>
+          </marker>
+        </defs>
+        <rect x="8" y="38" width="152" height="84" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+        <text x="84" y="64" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Certificate</text>
+        <text x="84" y="80" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Authority</text>
+        <text x="84" y="102" text-anchor="middle" font-size="11" fill="var(--priv)">CA private key</text>
+
+        <line x1="164" y1="80" x2="250" y2="80" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"></line>
+        <text x="207" y="70" text-anchor="middle" font-size="11" fill="currentColor">signs</text>
+
+        <rect x="256" y="26" width="206" height="108" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+        <text x="359" y="52" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Certificate</text>
+        <text x="359" y="72" text-anchor="middle" font-size="11" fill="currentColor">shop.example.eg</text>
+        <text x="359" y="92" text-anchor="middle" font-size="11" fill="var(--pub)">server public key</text>
+        <text x="359" y="112" text-anchor="middle" font-size="11" fill="currentColor">+ CA signature</text>
+
+        <line x1="466" y1="80" x2="552" y2="80" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"></line>
+        <text x="509" y="70" text-anchor="middle" font-size="11" fill="currentColor">sends</text>
+
+        <rect x="558" y="38" width="154" height="84" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+        <text x="635" y="64" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Browser</text>
+        <text x="635" y="86" text-anchor="middle" font-size="11" fill="var(--pub)">CA public key</text>
+        <text x="635" y="102" text-anchor="middle" font-size="11" fill="currentColor">built into the browser</text>
+
+        <polyline points="635,128 635,176 359,176 359,142" fill="none" stroke="var(--good)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arv)"></polyline>
+        <text x="497" y="192" text-anchor="middle" font-size="11" fill="var(--good)">verifies the signature — no network call needed</text>
+      </svg>
+    </div>
+    <figcaption class="small muted" style="margin-top:8px">الـ <span class="en">CA</span> بتوقّع الشهادة بمفتاحها الخاص، والمتصفح بيتحقق من التوقيع بمفتاح الـ CA العام اللي متثبّت جواه من ساعة ما اتنزّل. عشان كده التحقق بيحصل من غير ما المتصفح يكلم الـ CA.</figcaption>
+  </figure>
+
+  <div class="card">
+    <div class="grid g2">
+      <div class="stack">
+        <h4>الشهادة اللي السيرفر بعتها</h4>
+        <div class="cert" id="s3cert">
+          <div class="top"><span id="s3certico">🔒</span><span>Digital Certificate</span></div>
+          <dl>
+            <dt>Common Name</dt><dd id="s3cn">shop.example.eg</dd>
+            <dt>Owner</dt><dd>Example Online Store</dd>
+            <dt>Public key</dt><dd style="color:var(--pub)">server public key 🔑</dd>
+            <dt>Issued by</dt><dd>EG-Trust Root CA</dd>
+            <dt>Valid until</dt><dd>2027-04-30</dd>
+            <dt>Signature</dt><dd id="s3sig" style="color:var(--priv)">…</dd>
+          </dl>
+        </div>
+        <div class="row">
+          <button class="btn d" id="s3tamper">🎭 المهاجم يغيّر الاسم في الشهادة</button>
+          <button class="btn" id="s3reset">إرجاع الأصل</button>
+        </div>
+      </div>
+
+      <div class="stack">
+        <h4>الخطوات اللي المتصفح بيعملها</h4>
+        <div class="card flat stack tight">
+          <div><span class="muted small">① بصمة محتوى الشهادة زي ما المتصفح حسبها</span>
+            <div class="out" id="s3hash">…</div></div>
+          <div class="down">▼ لازم تطابق ▼</div>
+          <div><span class="muted small">② البصمة اللي طلعت من توقيع الـ CA</span>
+            <div class="out" id="s3unsig">…</div></div>
+        </div>
+        <button class="btn p" id="s3verify">تحقّق من الشهادة 🔎</button>
+        <div class="note" id="s3result" hidden></div>
+      </div>
+    </div>
+
+    <div class="note info" style="margin-top:14px">
+      <span class="t">Digital signature — الاتجاه بينعكس</span>
+      في التشفير العادي: العام يقفل والخاص يفتح. في التوقيع: <b>الخاص بيوقّع</b> (لأنه هو الوحيد اللي معاه) و<b>العام بيتحقق</b> (لأنه مع الكل). ده اللي بيثبت إن اللي وقّع هو صاحب المفتاح الخاص فعلًا.
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section class="stage" id="s4" role="tabpanel" aria-labelledby="t4" hidden>
+  <div class="stage-head">
+    <div class="kicker">06 · THE HANDSHAKE · المحاكاة الكاملة</div>
+    <h2>المصافحة: 7 خطوات من أول ما تكتب العنوان</h2>
+    <p class="lede">دلوقتي نركّب كل حاجة مع بعض. امشي خطوة خطوة وركّز في حاجتين: <b>الخزنة</b> تحت — إيه اللي كل طرف بيملكه في اللحظة دي، و<b>صندوق المهاجم</b> — هو شايف إيه بالظبط.</p>
+  </div>
+
+  <div class="phases" id="hsPhases">
+    <div class="phase pub" data-ph="0"><span class="pn">① Connection</span><span class="pm">public-key</span></div>
+    <div class="phase pub" data-ph="1"><span class="pn">② Key exchange</span><span class="pm">public-key</span></div>
+    <div class="phase sym" data-ph="2"><span class="pn">③ Data communication</span><span class="pm">common-key</span></div>
+  </div>
+  <div class="timeline" id="hsTimeline"></div>
+
+  <div class="sim">
+    <div class="wirebox">
+      <div class="actor" id="hsBrowser"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"></rect><path d="M2.5 9h19"></path><circle cx="6" cy="6.5" r=".95" fill="currentColor" stroke="none"></circle><circle cx="9" cy="6.5" r=".95" fill="currentColor" stroke="none"></circle></svg></div><div class="nm">Browser</div><div class="sub">المتصفح</div></div>
+      <div class="channel" id="hsChannel">
+        <div class="chlabel">the internet · الخط المفتوح</div>
+        <div class="packet" id="hsPacket" hidden>
+          <div class="ptitle"><span class="dot round"></span><span id="hsPktTitle"></span></div>
+          <div id="hsPktBody"></div>
+        </div>
+      </div>
+      <div class="actor" id="hsServer"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="6.5" rx="1.8"></rect><rect x="3" y="13.5" width="18" height="6.5" rx="1.8"></rect><path d="M7 7.2h.01M7 16.8h.01"></path></svg></div><div class="nm">Web server</div><div class="sub">السيرفر</div></div>
+      <div class="eve">
+        <div class="hd"><span>🕵️</span><span>Attacker on the wire — المهاجم شايف</span></div>
+        <div class="body" id="hsEve">—</div>
+        <div class="verdict" id="hsEveV">—</div>
+      </div>
+    </div>
+
+    <div class="vaults">
+      <div class="vault">
+        <h5>🌐 اللي عند المتصفح دلوقتي</h5>
+        <div class="keys" id="hsVaultB"></div>
+      </div>
+      <div class="vault">
+        <h5>🖥️ اللي عند السيرفر دلوقتي</h5>
+        <div class="keys" id="hsVaultS"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steplog">
+    <div class="hd">
+      <span class="stepn" id="hsN">STEP 1</span>
+      <span class="ten" id="hsTitleEn"></span>
+      <span class="k k-mut" id="hsMethod"></span>
+    </div>
+    <p class="tar" id="hsTitleAr"></p>
+    <div id="hsExtra" style="margin-top:12px"></div>
+  </div>
+
+  <div class="row" style="margin-top:14px;justify-content:space-between">
+    <div class="row">
+      <button class="btn" id="hsPrev">◀ السابقة</button>
+      <button class="btn p" id="hsNext">الخطوة الجاية ▶</button>
+      <button class="btn" id="hsPlay">▶︎ شغّل الكل</button>
+      <button class="btn" id="hsReset">↺ من الأول</button>
+    </div>
+    <span class="small muted">تقدر تستخدم سهمي ← → في الكيبورد</span>
+  </div>
+
+  <div class="card" style="margin-top:18px">
+    <h4>خلاصة المصافحة — زي ما في الكتاب</h4>
+    <div class="scroll">
+      <table class="tbl" style="min-width:560px">
+        <thead><tr><th>Stage</th><th>What happens</th><th>Cryptographic method</th></tr></thead>
+        <tbody>
+          <tr><td>① Connection</td><td class="wide">السيرفر يبعت الشهادة الرقمية والمفتاح العام، والمتصفح يتأكد من هوية السيرفر عن طريق الـ CA.</td><td style="color:var(--pub)">Public-key</td></tr>
+          <tr><td>② Key exchange</td><td class="wide">المتصفح يولّد المفتاح المشترك، يقفله بالمفتاح العام للسيرفر ويبعته. السيرفر يفتحه بمفتاحه الخاص.</td><td style="color:var(--pub)">Public-key</td></tr>
+          <tr><td>③ Data communication</td><td class="wide">البيانات بتتشفّر وتتبادل بالمفتاح المشترك.</td><td style="color:var(--sym)">Common-key</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <details class="card" style="margin-top:16px">
+    <summary style="cursor:pointer;font-weight:600;color:var(--ink)">للطلاب الشاطرين: النسخة الحديثة <span class="en">Diffie-Hellman</span> 🎓</summary>
+    <p style="margin-top:10px">في آخر الكتاب فيه ملاحظة بتقول: الإصدارات الحديثة من <span class="en">TLS</span> بتستخدم <b>Diffie-Hellman key agreement</b> بدل ما المتصفح يبعت المفتاح مقفول. الفكرة إن الطرفين <b>يوصلوا لنفس المفتاح من غير ما يبعتوه أصلًا</b>. وأسهل طريقة تشرحها للطلبة: بالألوان.</p>
+    <div class="scroll" style="margin-top:12px">
+      <table class="tbl" style="min-width:560px;direction:rtl">
+        <thead><tr><th style="text-align:right"></th><th style="text-align:right">المتصفح</th><th style="text-align:right">على الخط المفتوح</th><th style="text-align:right">السيرفر</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="wide">لون معلن للكل</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#E8B400;vertical-align:-2px"></span> أصفر</td>
+            <td style="color:var(--bad)" class="wide">المهاجم شايفه</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#E8B400;vertical-align:-2px"></span> أصفر</td>
+          </tr>
+          <tr>
+            <td class="wide">لون سرّي عند كل طرف</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#D13A3A;vertical-align:-2px"></span> أحمر</td>
+            <td class="wide">—</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#2F6FD0;vertical-align:-2px"></span> أزرق</td>
+          </tr>
+          <tr>
+            <td class="wide">يخلط ويبعت الخليط</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#E07B2A;vertical-align:-2px"></span> برتقالي</td>
+            <td style="color:var(--bad)" class="wide">شايف البرتقالي والأخضر</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#2E9E6B;vertical-align:-2px"></span> أخضر</td>
+          </tr>
+          <tr>
+            <td class="wide">يضيف لونه السرّي تاني</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#6B4326;vertical-align:-2px"></span> <b style="color:var(--sym)">بنّي</b></td>
+            <td style="color:var(--good)" class="wide">مش قادر يوصل للبنّي</td>
+            <td><span style="display:inline-block;width:13px;height:13px;border-radius:3px;background:#6B4326;vertical-align:-2px"></span> <b style="color:var(--sym)">بنّي</b></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted" style="margin-top:10px">الاتنين وصلوا لنفس اللون البنّي، واللون ده عمره ما عدّى على الشبكة. المهاجم شايف الأصفر والبرتقالي والأخضر — وبرضه مش قادر يطلّع البنّي، لأنك <b>مش بتعرف تفصل الألوان بعد ما تتخلط</b>. وده بالظبط اللي بيحصل بالأرقام في الحقيقة.</p>
+  </details>
+</section>
+
+<!-- ============ 6 ============ -->
+<section class="stage" id="s5" role="tabpanel" aria-labelledby="t5" hidden>
+  <div class="stage-head">
+    <div class="kicker">07 · WHY BOTH</div>
+    <h2>ليه استخدمنا النوعين مع بعض؟ تقسيم الأدوار</h2>
+    <p class="lede">السؤال اللي بييجي في بال أي طالب: طالما الـ <span class="en">public-key</span> آمن كده، ليه مكمّلناش بيه لحد الآخر؟ الإجابة رقم — وتقدر تقيسه بنفسك دلوقتي.</p>
+  </div>
+
+  <div class="card">
+    <h4>قياس مباشر على جهازك</h4>
+    <p class="small muted" style="margin-bottom:12px">هنشفّر نفس النص بالطريقتين ونحسب الوقت بالملي ثانية.</p>
+    <div class="row" style="margin-bottom:14px">
+      <label class="fld" style="flex:0 1 220px">عدد الحروف
+        <input type="text" id="s5n" value="4000" spellcheck="false">
+      </label>
+      <button class="btn p" id="s5run" style="align-self:flex-end">قيس السرعة ⏱️</button>
+    </div>
+    <div class="bars">
+      <div class="bar">
+        <div class="lbl"><span style="color:var(--sym)">Common-key (symmetric)</span><span id="s5symt">—</span></div>
+        <div class="track"><div class="fill sym" id="s5symb"></div></div>
+      </div>
+      <div class="bar">
+        <div class="lbl"><span style="color:var(--pub)">Public-key cryptography</span><span id="s5pubt">—</span></div>
+        <div class="track"><div class="fill pub" id="s5pubb"></div></div>
+      </div>
+    </div>
+    <div class="note info" id="s5verdict" style="margin-top:14px">اضغط «قيس السرعة» وشوف الفرق بنفسك.</div>
+    <p class="small muted" style="margin-top:10px">القياس ده بمفاتيح صغيرة للتبسيط. المفاتيح الحقيقية أكبر بكتير جدًا، يعني الفرق الفعلي في السرعة <b>أكبر من اللي شايفه قدامك</b>.</p>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card" style="border-top:3px solid var(--pub)">
+      <div class="k k-pub" style="margin-bottom:9px"><span class="dot"></span>Public-key cryptography</div>
+      <h3>بيتستخدم عشان نوصّل المفتاح بأمان</h3>
+      <p style="margin-top:8px">بطيء، فيحلّ مشكلة واحدة بس — بس هي أصعب مشكلة: إزاي طرفين مايعرفوش بعض يتفقوا على سرّ قدام الكل. بيشتغل مرة واحدة في أول الاتصال.</p>
+    </div>
+    <div class="card" style="border-top:3px solid var(--sym)">
+      <div class="k k-sym" style="margin-bottom:9px"><span class="dot"></span>Common-key cryptography</div>
+      <h3>بيتستخدم عشان نبادل كميات بيانات كبيرة بسرعة</h3>
+      <p style="margin-top:8px">سريع جدًا، بس محتاج إن الطرفين يكون عندهم نفس المفتاح — وده بالظبط اللي النوع التاني وفّره. بيشتغل طول مدة الاتصال.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;background:var(--slab);border-color:var(--slab-line)">
+    <p style="color:var(--slab-ink);font-size:17px;font-family:var(--dis);line-height:1.7">
+      تقسيم الأدوار ده هو اللي خلّانا ناخد <span style="color:var(--sym)">الأمان</span> و<span style="color:var(--sym)">السرعة</span> مع بعض — بدل ما نختار واحد منهم.
+    </p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h4>مقارنة سريعة للمراجعة</h4>
+    <div class="scroll">
+      <table class="tbl" style="min-width:600px">
+        <thead><tr><th></th><th style="color:var(--sym)">Common-key</th><th style="color:var(--pub)">Public-key</th></tr></thead>
+        <tbody>
+          <tr><td class="wide">عدد المفاتيح</td><td>مفتاح واحد مشترك</td><td>زوج: عام + خاص</td></tr>
+          <tr><td class="wide">اللي بيقفل واللي بيفتح</td><td>نفس المفتاح</td><td>العام يقفل / الخاص يفتح</td></tr>
+          <tr><td class="wide">السرعة</td><td style="color:var(--good)">سريع جدًا</td><td style="color:var(--bad)">بطيء</td></tr>
+          <tr><td class="wide">المشكلة اللي فيه</td><td>توصيل المفتاح</td><td>الأداء مع البيانات الكبيرة</td></tr>
+          <tr><td class="wide">دوره في HTTPS</td><td>تشفير البيانات نفسها</td><td>التحقق من الهوية + تبادل المفتاح</td></tr>
+          <tr><td class="wide">في أي مرحلة؟</td><td>③ Data communication</td><td>① Connection · ② Key exchange</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section class="stage" id="s6" role="tabpanel" aria-labelledby="t6" hidden>
+  <div class="stage-head">
+    <div class="kicker">08 · CHECK YOURSELF</div>
+    <h2>اختبر نفسك</h2>
+    <p class="lede">ستة أسئلة على اللي فات. اختار الإجابة وهتشوف التصحيح والسبب على طول.</p>
+  </div>
+  <div class="stack" id="quiz"></div>
+  <div class="card" id="quizScore" style="margin-top:16px;text-align:center" hidden>
+    <h3 id="quizScoreT"></h3>
+    <p class="muted small" id="quizScoreS" style="margin-top:6px"></p>
+    <button class="btn" id="quizAgain" style="margin-top:12px">جرّب تاني ↺</button>
+  </div>
+</section>
+
+</main>
+</div>
+
+<div class="footbar">
+  <div class="inner">
+    <button class="btn" id="fbPrev">◀ السابق</button>
+    <div class="legend">
+      <span class="k k-pub"><span class="dot"></span>public key</span>
+      <span class="k k-priv"><span class="dot"></span>private key</span>
+      <span class="k k-sym"><span class="dot"></span>common key</span>
+      <span class="k k-bad"><span class="dot"></span>attacker</span>
+    </div>
+    <div class="row" style="gap:12px">
+      <span class="pos" id="fbPos">1 / 7</span>
+      <button class="btn p" id="fbNext">التالي ▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $ = function(s){ return document.querySelector(s); };
+var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============ crypto core (real maths, classroom-sized numbers) ============ */
+function modPow(base, exp, mod){
+  var b = BigInt(base) % BigInt(mod), e = BigInt(exp), m = BigInt(mod), r = 1n;
+  while(e > 0n){ if(e & 1n){ r = r * b % m; } b = b * b % m; e >>= 1n; }
+  return Number(r);
+}
+var RSA = { n:3233, e:17, d:2753 };          // p=61, q=53
+var CA  = { n:2773, e:17, d:157  };          // p=47, q=59
+function hex(c){ var s = c.toString(16).toUpperCase(); return s.length < 2 ? '0'+s : s; }
+function safeChar(code){ return (code >= 32 && code < 127) ? String.fromCharCode(code) : '·'; }
+function xorEnc(txt, key){
+  if(!key) key = ' ';
+  var out = [], i;
+  for(i = 0; i < txt.length; i++){ out.push(txt.charCodeAt(i) ^ key.charCodeAt(i % key.length)); }
+  return out;
+}
+function xorDec(codes, key){
+  if(!key) key = ' ';
+  return codes.map(function(c,i){ return safeChar(c ^ key.charCodeAt(i % key.length)); }).join('');
+}
+function toHex(codes){ return codes.map(hex).join(' '); }
+/* simple letter-shift used ONLY for the classroom demo in station 2 */
+function keyShift(key, i){
+  if(!key) return 0;
+  var k = key.toUpperCase().charCodeAt(i % key.length) - 65;
+  return (k >= 0 && k <= 25) ? k : 0;
+}
+function shiftText(txt, key, dir){
+  var out = '', i, c, k;
+  for(i = 0; i < txt.length; i++){
+    c = txt.charCodeAt(i);
+    k = (dir > 0) ? keyShift(key, i) : (26 - keyShift(key, i)) % 26;
+    if(c >= 65 && c <= 90)       out += String.fromCharCode((c - 65 + k) % 26 + 65);
+    else if(c >= 97 && c <= 122) out += String.fromCharCode((c - 97 + k) % 26 + 97);
+    else                          out += txt.charAt(i);
+  }
+  return out;
+}
+function rsaEnc(txt){
+  var out = [], i, m;
+  for(i = 0; i < txt.length; i++){
+    m = txt.charCodeAt(i);
+    out.push(m < RSA.n ? modPow(m, RSA.e, RSA.n) : modPow(63, RSA.e, RSA.n));
+  }
+  return out;
+}
+function sealedHex(nums){
+  return nums.map(function(n){
+    var s = n.toString(16).toUpperCase();
+    while(s.length < 4){ s = '0' + s; }
+    return s;
+  }).join('');
+}
+function rsaDec(nums, exp){
+  return nums.map(function(c){ return safeChar(modPow(c, exp, RSA.n)); }).join('');
+}
+function hashOf(str){
+  var h = 7, i;
+  for(i = 0; i < str.length; i++){ h = (h * 31 + str.charCodeAt(i)) % CA.n; }
+  return h || 1;
+}
+
+/* ============ stage navigation ============ */
+var STAGES = [
+  {id:'s0', label:'المشكلة'},
+  {id:'s1', label:'Common-key'},
+  {id:'s2', label:'Public-key'},
+  {id:'s7', label:'الفرق بينهم'},
+  {id:'s3', label:'الشهادة'},
+  {id:'s4', label:'المصافحة'},
+  {id:'s5', label:'ليه الاتنين'},
+  {id:'s6', label:'اختبر نفسك'}
+];
+var HS_IDX = 5;
+var cur = 0, navBtns = [];
+(function buildNav(){
+  var row = $('#navrow');
+  STAGES.forEach(function(st, i){
+    var b = document.createElement('button');
+    b.type = 'button'; b.id = 't' + i; b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    b.setAttribute('aria-controls', st.id);
+    b.innerHTML = '<span class="num">' + (i+1) + '</span><span>' + st.label + '</span>';
+    b.addEventListener('click', function(){ show(i); });
+    row.appendChild(b); navBtns.push(b);
+    document.getElementById(st.id).setAttribute('aria-labelledby', b.id);
+  });
+})();
+function show(i){
+  if(i < 0 || i >= STAGES.length) return;
+  cur = i;
+  STAGES.forEach(function(st, k){
+    document.getElementById(st.id).hidden = (k !== i);
+    navBtns[k].setAttribute('aria-selected', k === i ? 'true' : 'false');
+  });
+  $('#fbPos').textContent = (i+1) + ' / ' + STAGES.length;
+  $('#fbPrev').disabled = (i === 0);
+  $('#fbNext').disabled = (i === STAGES.length - 1);
+  $('#prog').style.width = ((i + 1) / STAGES.length * 100) + '%';
+  navBtns[i].scrollIntoView({block:'nearest', inline:'center', behavior: RM ? 'auto' : 'smooth'});
+  window.scrollTo({top:0, behavior: RM ? 'auto' : 'smooth'});
+  if(i === HS_IDX){ requestAnimationFrame(function(){ renderStep(hs.i, true); }); }
+}
+$('#fbPrev').addEventListener('click', function(){ show(cur - 1); });
+$('#fbNext').addEventListener('click', function(){ show(cur + 1); });
+document.addEventListener('keydown', function(e){
+  var t = e.target.tagName;
+  if(t === 'INPUT' || t === 'TEXTAREA') return;
+  if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  var fwd = (e.key === 'ArrowLeft');
+  if(cur === HS_IDX){ e.preventDefault(); renderStep(hs.i + (fwd ? 1 : -1)); }
+  else { e.preventDefault(); show(cur + (fwd ? 1 : -1)); }
+});
+
+/* ============ 1 · the leak ============ */
+var p0mode = 'http';
+var p0pkt = $('#p0pkt');
+p0pkt.style.left = '50%'; p0pkt.style.transform = 'translateX(-50%)';
+function renderS0(){
+  var msg = $('#p0msg').value || ' ';
+  var onWire, title, cls, eve, verdict;
+  if(p0mode === 'http'){
+    onWire = msg; title = 'plain text — نص واضح'; cls = 'packet open';
+    eve = msg;
+    verdict = 'قراها زي ما هي. الاسم والباسورد بقوا معاه دلوقتي.';
+  } else {
+    onWire = toHex(xorEnc(msg, 'K7QX2M')); title = 'encrypted — مشفّر'; cls = 'packet symsealed';
+    eve = onWire;
+    verdict = 'شايف أرقام ملهاش معنى. من غير المفتاح دي مجرد زبالة.';
+  }
+  $('#p0ptitle').textContent = title;
+  $('#p0pbody').textContent = onWire;
+  p0pkt.className = cls;
+  $('#p0eve').textContent = eve;
+  $('#p0verdict').textContent = verdict;
+}
+$('#p0msg').addEventListener('input', renderS0);
+$('#p0http').addEventListener('click', function(){
+  p0mode = 'http'; this.setAttribute('aria-pressed','true');
+  $('#p0https').setAttribute('aria-pressed','false'); renderS0();
+});
+$('#p0https').addEventListener('click', function(){
+  p0mode = 'https'; this.setAttribute('aria-pressed','true');
+  $('#p0http').setAttribute('aria-pressed','false'); renderS0();
+});
+
+/* ============ 2 · common-key lab ============ */
+function renderS1(){
+  var txt = $('#s1txt').value, key = $('#s1key').value, key2 = $('#s1key2').value;
+  var sealed = shiftText(txt, key, 1);
+  $('#s1cipher').textContent = txt.length ? sealed : '…';
+  $('#s1plain').textContent = txt.length ? shiftText(sealed, key2, -1) : '…';
+  var same = (key.toUpperCase() === key2.toUpperCase());
+  var chip = $('#s1matchchip');
+  chip.className = 'k ' + (same ? 'k-good' : 'k-bad');
+  chip.innerHTML = '<span class="dot"></span>' + (same ? 'same key ✓' : 'different key ✗');
+  $('#s1plain').className = 'out ' + (same ? 'ok' : 'danger');
+  var note = $('#s1note');
+  note.className = 'note ' + (same ? 'good' : 'bad');
+  note.innerHTML = same
+    ? '<span class="t">رجع زي ما هو</span> لأن المفتاحين متطابقين. ده معنى «مفتاح مشترك».'
+    : '<span class="t">طلع كلام فاضي</span> غيّر حرف واحد في المفتاح والرسالة تضيع. عشان كده لازم الطرفين يكون عندهم <b>نفس</b> المفتاح بالظبط.';
+  var rows = '<thead><tr><th>الحرف</th><th>حرف المفتاح</th><th>يتزحلق كام خطوة</th><th>يبقى</th></tr></thead><tbody>';
+  var lim = Math.min(txt.length, 8), i;
+  for(i = 0; i < lim; i++){
+    rows += '<tr><td>' + txt.charAt(i) + '</td><td>' + (key ? key.toUpperCase().charAt(i % key.length) : '—') +
+            '</td><td>' + keyShift(key, i) + '</td><td style="color:var(--sym)">' + sealed.charAt(i) + '</td></tr>';
+  }
+  if(txt.length > lim){ rows += '<tr><td colspan="4" style="color:var(--muted)">… و' + (txt.length - lim) + ' حرف كمان</td></tr>'; }
+  $('#s1table').innerHTML = rows + '</tbody>';
+}
+['#s1txt','#s1key','#s1key2'].forEach(function(s){ $(s).addEventListener('input', renderS1); });
+
+/* ============ 3 · public-key lab ============ */
+function renderS2(){
+  var txt = $('#s2txt').value;
+  var nums = rsaEnc(txt);
+  $('#s2cipher').textContent = nums.length ? sealedHex(nums) : '…';
+  $('#s2plain').textContent = 'اضغط زرار عشان تشوف النتيجة';
+  $('#s2plain').className = 'out';
+  $('#s2note').hidden = true;
+}
+$('#s2txt').addEventListener('input', renderS2);
+$('#s2dec').addEventListener('click', function(){
+  var nums = rsaEnc($('#s2txt').value);
+  $('#s2plain').textContent = rsaDec(nums, RSA.d) || '…';
+  $('#s2plain').className = 'out ok';
+  var n = $('#s2note'); n.hidden = false; n.className = 'note good';
+  n.innerHTML = '<span class="t">اتفتحت</span> المفتاح الخاص رجّع الرسالة زي ما هي بالظبط.';
+});
+$('#s2decwrong').addEventListener('click', function(){
+  var nums = rsaEnc($('#s2txt').value);
+  $('#s2plain').textContent = rsaDec(nums, RSA.e) || '…';
+  $('#s2plain').className = 'out danger';
+  var n = $('#s2note'); n.hidden = false; n.className = 'note bad';
+  n.innerHTML = '<span class="t">مافتحتش</span> المفتاح العام بيقفل بس، مابيفتحش اللي قفله. دي نقطة الارتكاز في الموضوع كله: المهاجم معاه المفتاح العام وبرضه مش قادر يقرا.';
+});
+
+/* ============ 4 · certificate ============ */
+var certState = { cn:'shop.example.eg', tampered:false };
+function certContent(cn){ return cn + '|Example Online Store|17,3233|EG-Trust Root CA|2027-04-30'; }
+var CERT_SIG = modPow(hashOf(certContent('shop.example.eg')), CA.d, CA.n);
+/* display-only: renders an internal value as a fingerprint string */
+function fp(num){
+  var s = ((num * 2654435761) % 4294967296).toString(16).toUpperCase();
+  while(s.length < 8){ s = '0' + s; }
+  return s.slice(0,2) + ':' + s.slice(2,4) + ':' + s.slice(4,6) + ':' + s.slice(6,8);
+}
+function renderS3(){
+  $('#s3cn').innerHTML = certState.tampered
+    ? '<span class="tamp">' + certState.cn + '</span>' : certState.cn;
+  $('#s3sig').textContent = fp(CERT_SIG) + ':' + fp(CERT_SIG * 3 % 9973);
+  $('#s3hash').textContent = fp(hashOf(certContent(certState.cn)));
+  $('#s3unsig').textContent = '…';
+  $('#s3unsig').className = 'out';
+  $('#s3cert').className = 'cert' + (certState.tampered ? ' tampered' : '');
+  $('#s3certico').textContent = certState.tampered ? '⚠️' : '🔒';
+  $('#s3result').hidden = true;
+}
+$('#s3tamper').addEventListener('click', function(){
+  certState.cn = 'shop.exarnp1e.eg'; certState.tampered = true; renderS3();
+});
+$('#s3reset').addEventListener('click', function(){
+  certState.cn = 'shop.example.eg'; certState.tampered = false; renderS3();
+});
+$('#s3verify').addEventListener('click', function(){
+  var h = hashOf(certContent(certState.cn));
+  var un = modPow(CERT_SIG, CA.e, CA.n);
+  var ok = (h === un);
+  $('#s3unsig').textContent = fp(un);
+  $('#s3unsig').className = 'out ' + (ok ? 'ok' : 'danger');
+  var r = $('#s3result'); r.hidden = false;
+  r.className = 'note ' + (ok ? 'good' : 'bad');
+  r.innerHTML = ok
+    ? '<span class="t">✓ الشهادة سليمة</span> البصمتين متطابقتين. يبقى محتوى الشهادة ده هو اللي الـ CA وقّعت عليه بالظبط، ومحدش لمسه بعدها. المتصفح يكمّل بأمان.'
+    : '<span class="t">✗ الشهادة مضروبة</span> البصمتين مختلفتين. المهاجم غيّر الاسم في الشهادة، بس مقدرش يعمل توقيع جديد يناسب التغيير — عشان كده كان محتاج المفتاح الخاص بتاع الـ CA، وده مش معاه ولا هيكون. المتصفح هيطلّع الصفحة الحمرا ويوقف.';
+});
+
+/* ============ 5 · the handshake ============ */
+function randKey(){
+  var abc = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s = '', i;
+  for(i = 0; i < 6; i++){ s += abc.charAt(Math.floor(Math.random() * abc.length)); }
+  return s;
+}
+var hs = { i:0, key:randKey(), attack:false, timer:null };
+function chip(cls, label){ return '<span class="k ' + cls + '"><span class="dot"></span>' + label + '</span>'; }
+
+function steps(){
+  var K = hs.key;
+  var sealed = sealedHex(rsaEnc(K));
+  return [
+  { en:'Client Hello', ar:'المتصفح بيفتح الكلام مع السيرفر ويقوله: عايز اتصال آمن، وأنا بعرف أنواع التشفير دي. لحد دلوقتي مفيش أي سر اتقال.',
+    phase:'① Connection', method:'public-key', dir:'c2s', pcls:'open',
+    ptitle:'طلب اتصال · نص واضح', pbody:'عايز أفتح اتصال آمن مع shop.example.eg',
+    eve:'طلب اتصال آمن مع shop.example.eg',
+    evev:'شايف إن فيه اتصال بدأ ومع مين — بس مفيش أسرار لسه.' },
+
+  { en:'Certificate + Public key', ar:'السيرفر بيرد بالشهادة الرقمية وجواها المفتاح العام بتاعه. لاحظ إن ده بيتبعت مكشوف على الخط — وده مش مشكلة، لأنه «عام» بطبيعته.',
+    phase:'① Connection', method:'public-key', dir:'s2c', pcls:'open',
+    ptitle:'Certificate · public key', pbody:'شهادة رقمية · shop.example.eg · المفتاح العام · توقيع EG-Trust CA',
+    eve:'شهادة رقمية + المفتاح العام + توقيع الـ CA',
+    evev:'أخد نسخة من المفتاح العام. عادي جدًا — المفتاح العام منشور للدنيا كلها أصلًا.' },
+
+  { en:'Verify certificate', ar:'المتصفح بيتحقق من توقيع الشهادة باستخدام مفتاح الـ CA العام المخزّن جواه. لو التوقيع سليم يبقى ده فعلًا الموقع اللي بيدّعيه، مش حد متنكّر.',
+    phase:'① Connection', method:'public-key', dir:null, pcls:'', ptitle:'', pbody:'',
+    eve:'—', evev:'مفيش حاجة بتتبعت على الخط. التحقق بيحصل جوه المتصفح نفسه.' },
+
+  { en:'Generate common key', ar:'المتصفح بيولّد مفتاحًا مشتركًا عشوائيًا للجلسة دي بس. لحد دلوقتي المفتاح ده موجود على جهازك أنت وبس ومخرجش لحتة تانية.',
+    phase:'② Key exchange', method:'public-key', dir:null, pcls:'', ptitle:'', pbody:'',
+    eve:'—', evev:'مفيش حاجة على الخط. المفتاح اتولد جوه جهازك.' },
+
+  { en:'Send the key, sealed', ar:'المتصفح بيقفل المفتاح المشترك بالمفتاح العام للسيرفر، وبعدين بيبعته. اللي يتقفل بالعام مايتفتحش غير بالخاص — والخاص عند السيرفر لوحده.',
+    phase:'② Key exchange', method:'public-key', dir:'c2s', pcls:'sealed',
+    ptitle:'encrypted with server public key', pbody:sealed,
+    eve:sealed,
+    evev:'شايف أرقام. عشان يرجّعها لازم يكون معاه الـ private key — ودي مافاتتش على الشبكة ولا مرة.' },
+
+  { en:'Server unlocks it', ar:'السيرفر بيفك القفل بمفتاحه الخاص، ويطلّع نفس المفتاح المشترك. دلوقتي الطرفين — وبس هما — عندهم نفس المفتاح.',
+    phase:'② Key exchange', method:'public-key', dir:null, pcls:'', ptitle:'', pbody:'',
+    eve:'—', evev:'الفك بيحصل جوه السيرفر. مفيش أي حاجة اتبعتت عشان يشوفها.' },
+
+  { en:'Data communication', ar:'من هنا ورايح كل البيانات بتتشفّر وتتفك بالمفتاح المشترك — سريع لأنه عمليات بسيطة. التشفير بالمفتاح العام خلص دوره وقف.',
+    phase:'③ Data communication', method:'common-key', dir:'c2s', pcls:'symsealed',
+    ptitle:'encrypted with common key', pbody:toHex(xorEnc('card=4519 8832', K)),
+    eve:toHex(xorEnc('card=4519 8832', K)),
+    evev:'بيانات مشفّرة بمفتاح مشترك هو مش معاه. الجلسة كلها كده لحد ما تقفل.' }
+  ];
+}
+function vaultB(i){
+  var a = [chip('k-pub','CA public key · built in')];
+  if(i >= 1) a.push(chip('k-pub','server public key'));
+  if(i >= 3) a.push(chip('k-sym','common key · ' + hs.key));
+  return a.join('');
+}
+function vaultS(i){
+  var a = [chip('k-pub','server public key'), chip('k-priv','server private key')];
+  if(i >= 5) a.push(chip('k-sym','common key · ' + hs.key));
+  return a.join('');
+}
+(function buildTimeline(){
+  var tl = $('#hsTimeline'), names = ['Hello','Certificate','Verify','Generate','Send key','Unlock','Data'];
+  names.forEach(function(nm, i){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = '<span class="n">STEP ' + (i+1) + '</span>' + nm;
+    b.addEventListener('click', function(){ renderStep(i); });
+    tl.appendChild(b);
+  });
+})();
+function fly(dir, cls, title, body){
+  var p = $('#hsPacket'), ch = $('#hsChannel');
+  if(!dir){ p.hidden = true; return; }
+  p.hidden = false;
+  p.className = 'packet ' + cls;
+  $('#hsPktTitle').textContent = title;
+  $('#hsPktBody').textContent = body;
+  var dist = Math.max(0, ch.clientWidth - p.offsetWidth - 16);
+  var from = (dir === 'c2s') ? 0 : dist, to = (dir === 'c2s') ? dist : 0;
+  p.style.transition = 'none';
+  p.style.transform = 'translateX(' + from + 'px)';
+  void p.offsetWidth;
+  if(!RM) p.style.transition = 'transform .95s cubic-bezier(.4,0,.2,1)';
+  p.style.transform = 'translateX(' + to + 'px)';
+}
+function extraFor(i){
+  if(i === 2){
+    if(hs.attack){
+      return '<div class="note bad"><span class="t">✗ سيناريو المهاجم — التحقق فشل</span>' +
+        'المهاجم قدر يعترض الاتصال ويبعت شهادة من عنده، بس مقدرش يزوّر توقيع الـ CA لأن ده محتاج المفتاح الخاص بتاع الـ CA. ' +
+        'المتصفح كشفها ووقف الاتصال — ده الصفحة الحمرا اللي بتشوفوها أحيانًا: <b>Your connection is not private</b>.</div>' +
+        '<div class="row" style="margin-top:10px"><button class="btn p" id="hsFix">ارجع للسيناريو السليم ↺</button></div>';
+    }
+    return '<div class="note good"><span class="t">✓ التوقيع سليم</span>' +
+      'المتصفح حسب بصمة الشهادة وقارنها باللي طلع من فك التوقيع بمفتاح الـ CA العام — طابقوا. يبقى ده الموقع الحقيقي.</div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn d" id="hsAtk">🎭 جرّب: لو ده موقع مزيف؟</button></div>';
+  }
+  if(i === 3){
+    return '<div class="row" style="gap:10px"><span class="small muted">المفتاح اللي اتولد دلوقتي:</span>' +
+      chip('k-sym','common key · ' + hs.key) +
+      '<button class="btn" id="hsRegen">ولّد واحد تاني ↺</button></div>' +
+      '<p class="small muted" style="margin-top:8px">عشوائي تمامًا، ولكل جلسة واحد جديد. لو قفلت الصفحة وفتحتها تاني هيتولد غيره.</p>';
+  }
+  if(i === 6){
+    return '<div class="row" style="gap:10px;align-items:flex-end">' +
+      '<label class="fld" style="flex:1 1 240px">ابعت رسالة من المتصفح' +
+      '<input type="text" id="hsMsg" value="card=4519 8832" spellcheck="false"></label>' +
+      '<button class="btn p" id="hsSend">ابعت ▶</button></div>' +
+      '<div class="grid g2" style="margin-top:12px">' +
+      '<div><span class="small muted">اللي بيوصل للسيرفر بعد الفك</span><div class="out ok" id="hsGot">' + 'card=4519 8832' + '</div></div>' +
+      '<div><span class="small muted">اللي المهاجم سجّله</span><div class="out danger" id="hsSniff">' + toHex(xorEnc('card=4519 8832', hs.key)) + '</div></div>' +
+      '</div>';
+  }
+  return '';
+}
+function bindExtra(i){
+  if(i === 2){
+    var a = $('#hsAtk'), f = $('#hsFix');
+    if(a) a.addEventListener('click', function(){ hs.attack = true; renderStep(2); });
+    if(f) f.addEventListener('click', function(){ hs.attack = false; renderStep(2); });
+  }
+  if(i === 3){
+    var r = $('#hsRegen');
+    if(r) r.addEventListener('click', function(){ hs.key = randKey(); renderStep(3); });
+  }
+  if(i === 6){
+    var s = $('#hsSend');
+    if(s) s.addEventListener('click', function(){
+      var m = $('#hsMsg').value || ' ';
+      var c = xorEnc(m, hs.key);
+      $('#hsGot').textContent = xorDec(c, hs.key);
+      $('#hsSniff').textContent = toHex(c);
+      fly('c2s', 'symsealed', 'encrypted with common key', toHex(c));
+      $('#hsEve').textContent = toHex(c);
+    });
+  }
+}
+function renderStep(i, quiet){
+  if(i < 0 || i > 6) return;
+  if(hs.attack && i > 2){
+    i = 2;
+    var box = $('#hsExtra');
+    if(!RM && box){ box.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}], {duration:260}); }
+  }
+  hs.i = i;
+  var S = steps(), s = S[i];
+  $('#hsN').textContent = 'STEP ' + (i+1);
+  $('#hsTitleEn').textContent = s.en;
+  $('#hsTitleAr').textContent = s.ar;
+  var mc = $('#hsMethod');
+  mc.className = 'k ' + (s.method === 'common-key' ? 'k-sym' : 'k-pub');
+  mc.innerHTML = '<span class="dot"></span>' + s.phase + ' · ' + s.method;
+  fly(s.dir, s.pcls, s.ptitle, s.pbody);
+  $('#hsEve').textContent = (hs.attack && i === 2) ? 'fake certificate · self-signed' : s.eve;
+  $('#hsEveV').textContent = (hs.attack && i === 2) ? 'حاول يمرّر شهادة مزوّرة — والمتصفح كشفها.' : s.evev;
+  $('#hsVaultB').innerHTML = vaultB(i);
+  $('#hsVaultS').innerHTML = vaultS(i);
+  $('#hsBrowser').className = 'actor' + ((s.dir === 'c2s' || i === 2 || i === 3) ? ' lit' : '');
+  $('#hsServer').className  = 'actor' + ((s.dir === 's2c' || i === 5) ? ' lit' : '');
+  $('#hsExtra').innerHTML = extraFor(i);
+  bindExtra(i);
+  Array.prototype.forEach.call($('#hsTimeline').children, function(b, k){
+    b.setAttribute('aria-current', k === i ? 'true' : 'false');
+    b.className = k < i ? 'done' : '';
+  });
+  var ph = (i <= 2) ? 0 : (i <= 5 ? 1 : 2);
+  Array.prototype.forEach.call($('#hsPhases').children, function(p, k){
+    p.className = 'phase ' + (k === 2 ? 'sym' : 'pub') + (k === ph ? ' on' : '');
+  });
+  $('#hsPrev').disabled = (i === 0);
+  $('#hsNext').disabled = (i === 6);
+}
+$('#hsPrev').addEventListener('click', function(){ renderStep(hs.i - 1); });
+$('#hsNext').addEventListener('click', function(){ renderStep(hs.i + 1); });
+$('#hsReset').addEventListener('click', function(){
+  stopPlay(); hs.attack = false; hs.key = randKey(); renderStep(0);
+});
+function stopPlay(){
+  if(hs.timer){ clearInterval(hs.timer); hs.timer = null; $('#hsPlay').textContent = '▶︎ شغّل الكل'; }
+}
+$('#hsPlay').addEventListener('click', function(){
+  if(hs.timer){ stopPlay(); return; }
+  hs.attack = false;
+  if(hs.i >= 6) renderStep(0);
+  this.textContent = '⏸ وقّف';
+  hs.timer = setInterval(function(){
+    if(hs.i >= 6){ stopPlay(); return; }
+    renderStep(hs.i + 1);
+  }, RM ? 900 : 2400);
+});
+
+/* ============ 4 · common vs public — classification drill ============ */
+var DRILL = [
+  { s:'مفتاح واحد بس، هو اللي بيقفل وهو نفسه اللي بيفتح.', a:'sym',
+    w:'ده تعريف المفتاح المشترك بالظبط. في النوع التاني فيه مفتاحين مختلفين.' },
+  { s:'المهاجم معاه نسخة منه — وده مش بيضرّ خالص.', a:'pub',
+    w:'المفتاح العام منشور للدنيا كلها بالتصميم، لأنه بيقفل بس. لو المفتاح المشترك اتسرّب الجلسة كلها تنكشف.' },
+  { s:'بيشفّر الصفحة والصور والفيديو طول الجلسة.', a:'sym',
+    w:'لأنه سريع. المفتاح العام دوره بيخلص بعد أول شوية ميلي ثانية.' },
+  { s:'المتصفح بيستخدمه عشان يقفل بيه المفتاح المشترك قبل ما يبعته.', a:'pub',
+    w:'دي خطوة Key exchange: بيقفل بالمفتاح العام للسيرفر، والسيرفر بس هو اللي يقدر يفتح.' },
+  { s:'مشكلته الكبيرة: إزاي أوصّله للطرف التاني من غير ما حد ياخده في الطريق؟', a:'sym',
+    w:'دي مشكلة توزيع المفتاح — وهي السبب اللي خلّى الناس تخترع المفتاح العام من الأساس.' },
+  { s:'بيتستخدم في التوقيع الرقمي والتأكد إن الموقع هو اللي بيدّعيه.', a:'pub',
+    w:'التوقيع: الخاص يوقّع والعام يتحقق. المفتاح المشترك مالوش أي علاقة بإثبات الهوية.' },
+  { s:'بطيء، فمينفعش نشفّر بيه كميات بيانات كبيرة.', a:'pub',
+    w:'كل حرف محتاج رفع لأُس ضخم وقسمة. عشان كده بنستخدمه مرة واحدة بس في أول الاتصال.' },
+  { s:'بيتولد جديد كل جلسة وبيتمسح لما تقفل الصفحة.', a:'sym',
+    w:'مفتاح مؤقت للجلسة دي بس. أما مفاتيح السيرفر (العام والخاص) فبتفضل شغالة سنين.' }
+];
+var dAns = 0, dRight = 0;
+function buildDrill(){
+  dAns = 0; dRight = 0;
+  var wrap = $('#drill'); wrap.innerHTML = '';
+  $('#drillScore').textContent = '0 / ' + DRILL.length;
+  DRILL.forEach(function(it){
+    var d = document.createElement('div'); d.className = 'ditem';
+    d.innerHTML = '<div class="top"><div class="st">' + it.s + '</div><div class="picks">' +
+      '<button type="button" class="symp" data-v="sym">Common-key</button>' +
+      '<button type="button" class="pubp" data-v="pub">Public-key</button>' +
+      '</div></div><div class="why"></div>';
+    var btns = Array.prototype.slice.call(d.querySelectorAll('.picks button'));
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        if(d.classList.contains('done')) return;
+        var ok = (b.dataset.v === it.a);
+        btns.forEach(function(x){
+          x.disabled = true;
+          if(x.dataset.v === it.a){ x.dataset.on = '1'; }
+          else if(x === b){ x.className += ' miss'; }
+        });
+        d.className = 'ditem done ' + (ok ? 'ok' : 'no');
+        d.querySelector('.why').innerHTML =
+          (ok ? '<b style="color:var(--good)">✓ صح</b> · ' : '<b style="color:var(--bad)">✗ غلط</b> · ') + it.w;
+        dAns++; if(ok) dRight++;
+        $('#drillScore').textContent = dRight + ' / ' + DRILL.length;
+      });
+    });
+    wrap.appendChild(d);
+  });
+}
+$('#drillReset').addEventListener('click', buildDrill);
+
+/* ============ 6 · speed ============ */
+function bench(){
+  var n = parseInt($('#s5n').value, 10);
+  if(isNaN(n) || n < 200) n = 200;
+  if(n > 20000) n = 20000;
+  $('#s5n').value = n;
+  var txt = '', abc = 'abcdefghijklmnopqrstuvwxyz ', i;
+  for(i = 0; i < n; i++){ txt += abc.charAt(i * 7 % abc.length); }
+  var t0 = performance.now(); xorEnc(txt, 'K7QX2M'); var tSym = performance.now() - t0;
+  var t1 = performance.now(); rsaEnc(txt);           var tPub = performance.now() - t1;
+  if(tSym < 0.01) tSym = 0.01;
+  var max = Math.max(tSym, tPub);
+  $('#s5symt').textContent = tSym.toFixed(2) + ' ms';
+  $('#s5pubt').textContent = tPub.toFixed(2) + ' ms';
+  $('#s5symb').style.width = Math.max(2, tSym / max * 100) + '%';
+  $('#s5pubb').style.width = Math.max(2, tPub / max * 100) + '%';
+  var ratio = Math.round(tPub / tSym);
+  $('#s5verdict').innerHTML = '<span class="t">النتيجة</span> تشفير ' + n + ' حرف: المفتاح المشترك خلّص في <b>' +
+    tSym.toFixed(2) + ' ms</b>، والمفتاح العام أخد <b>' + tPub.toFixed(2) + ' ms</b> — يعني أبطأ بحوالي <b>' +
+    (isFinite(ratio) ? ratio : '—') + ' مرة</b>. تخيّل ده على صفحة فيها صور وفيديو.';
+}
+$('#s5run').addEventListener('click', bench);
+
+/* ============ 7 · quiz ============ */
+var QS = [
+  { q:'أنهي مفتاح بيكون معروف للناس كلها — بشكل مقصود؟',
+    o:['المفتاح المشترك', 'المفتاح العام', 'المفتاح الخاص', 'مفيش واحد فيهم'], a:1,
+    w:'«عام» يعني منشور للكل فعلًا، وده مش خطر لأنه بيقفل بس. أما «المشترك» فده سر بين طرفين — الاسم بيلخبط بس المعنى عكس بعضه.' },
+  { q:'المفتاح المشترك (common key) سرّي ولا منشور؟',
+    o:['منشور زي المفتاح العام', 'سرّي — طرفين بس عندهم نسخة منه', 'منشور بس مكتوب بالعكس', 'بيتنشر بعد ما الجلسة تخلص'], a:1,
+    w:'كلمة «مشترك» مش معناها منشور. معناها إن طرفين بس بيشتركوا فيه، ولو تسرّب الجلسة كلها تنكشف.' },
+  { q:'مين اللي بيولّد المفتاح المشترك (common key) في المصافحة؟',
+    o:['المتصفح', 'السيرفر', 'الـ Certificate Authority', 'الاتنين مع بعض في نفس الوقت'], a:0,
+    w:'المتصفح هو اللي بيولّده، وبعدين بيقفله بالمفتاح العام للسيرفر ويبعته. السيرفر بيفتحه بمفتاحه الخاص.' },
+  { q:'أنهي مفتاح مايخرجش من السيرفر أبدًا؟',
+    o:['المفتاح العام', 'المفتاح الخاص', 'المفتاح المشترك', 'مفتاح الـ CA العام'], a:1,
+    w:'المفتاح الخاص (private key) عمره ما بيتبعت. لو خرج مرة، الأمان كله بيقع.' },
+  { q:'المهاجم سجّل الرسالة اللي فيها المفتاح المشترك مقفول بالمفتاح العام. يقدر يفكها؟',
+    o:['أيوه، لأن المفتاح العام معاه', 'أيوه، لو سجّل الاتصال من أوله', 'لأ، محتاج المفتاح الخاص وده عند السيرفر بس', 'لأ، لأن الرسالة دي مابتتبعتش أصلًا'], a:2,
+    w:'المفتاح العام بيقفل بس. الفتح محتاج المفتاح الخاص، وده مافاتش على الشبكة ولا مرة.' },
+  { q:'ليه مانستخدمش الـ public-key في تشفير كل البيانات ونستغنى عن المفتاح المشترك؟',
+    o:['لأنه أقل أمانًا', 'لأنه بطيء جدًا مع كميات البيانات الكبيرة', 'لأن المتصفحات مابتدعمهوش', 'لأنه محتاج إنترنت أسرع'], a:1,
+    w:'هو آمن، بس كل حرف محتاج عمليات حسابية تقيلة. عشان كده بنستخدمه مرة واحدة لتوصيل المفتاح بس.' },
+  { q:'المتصفح بيتأكد إزاي إن الشهادة بتاعة الموقع الحقيقي مش مزوّرة؟',
+    o:['بيسأل السيرفر تاني', 'بيقارن اسم الموقع باللي في الشهادة وبس', 'بيتحقق من توقيع الـ CA بمفتاح الـ CA العام المخزّن جواه', 'بيتصل بالـ CA كل مرة عشان يسأل'], a:2,
+    w:'مفاتيح الـ CA العامة متثبّتة جوه المتصفح من ساعة ما اتنزّل، فالتحقق بيحصل محليًا من غير ما يكلم حد.' },
+  { q:'في مرحلة تبادل البيانات (Data communication) البيانات بتتشفّر بإيه؟',
+    o:['بالمفتاح المشترك', 'بالمفتاح العام للسيرفر', 'بالمفتاح الخاص للسيرفر', 'بمفتاح الـ CA'], a:0,
+    w:'خلاص الطرفين بقى عندهم نفس المفتاح المشترك، فبيستخدموه لأنه أسرع بكتير.' }
+];
+var answered = 0, correct = 0;
+function buildQuiz(){
+  answered = 0; correct = 0;
+  var wrap = $('#quiz'); wrap.innerHTML = '';
+  $('#quizScore').hidden = true;
+  QS.forEach(function(item, qi){
+    var d = document.createElement('div'); d.className = 'q';
+    var h = '<div class="qt">' + (qi+1) + '. ' + item.q + '</div><div class="opts">';
+    item.o.forEach(function(op, oi){ h += '<button type="button" data-o="' + oi + '">' + op + '</button>'; });
+    h += '</div><div class="fb" hidden></div>';
+    d.innerHTML = h;
+    var btns = Array.prototype.slice.call(d.querySelectorAll('.opts button'));
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        if(d.dataset.done) return;
+        d.dataset.done = '1';
+        var pick = parseInt(b.dataset.o, 10), ok = (pick === item.a);
+        btns.forEach(function(x, xi){
+          x.disabled = true;
+          if(xi === item.a) x.className = 'right';
+          else if(xi === pick) x.className = 'wrong';
+        });
+        var fb = d.querySelector('.fb');
+        fb.hidden = false;
+        fb.className = 'fb note ' + (ok ? 'good' : 'bad');
+        fb.innerHTML = '<span class="t">' + (ok ? '✓ صح' : '✗ غلط') + '</span>' + item.w;
+        answered++; if(ok) correct++;
+        if(answered === QS.length){
+          $('#quizScore').hidden = false;
+          $('#quizScoreT').textContent = 'نتيجتك: ' + correct + ' من ' + QS.length;
+          $('#quizScoreS').textContent = correct === QS.length ? 'ممتاز — ماسك الدرس كويس.'
+            : (correct >= Math.ceil(QS.length * 0.7) ? 'كويس. راجع النقط اللي غلطت فيها.'
+            : 'ارجع لمحطة «الفرق بينهم» وبعدين المصافحة، وامشي خطوة خطوة تاني.');
+        }
+      });
+    });
+    wrap.appendChild(d);
+  });
+}
+$('#quizAgain').addEventListener('click', buildQuiz);
+
+/* ============ boot ============ */
+renderS0(); renderS1(); renderS2(); renderS3(); renderStep(0, true); buildDrill(); buildQuiz(); bench();
+show(0);
+window.addEventListener('resize', function(){
+  if(cur === HS_IDX) renderStep(hs.i, true);
+});
+})();
+</script>
+</body>
+</html>
